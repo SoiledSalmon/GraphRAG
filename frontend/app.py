@@ -6,7 +6,7 @@ import time
 # -------------------------------
 st.set_page_config(
     page_title="Graph-Based RAG Chatbot",
-    layout="centered"
+    layout="wide"
 )
 
 st.title("Graph-Based RAG Chatbot")
@@ -14,11 +14,23 @@ st.title("Graph-Based RAG Chatbot")
 # -------------------------------
 # Mode Selector
 # -------------------------------
-mode = st.radio(
-    "Select Retrieval Mode:",
-    ("Baseline RAG", "Graph-RAG"),
-    horizontal=True
-)
+with st.sidebar:
+    st.header("Settings")
+    mode = st.radio(
+        "Retrieval Mode",
+        ("Baseline RAG", "Graph-RAG")
+    )
+
+    st.markdown("---")
+    st.markdown(
+        """
+        **Baseline RAG**  
+        Uses vector similarity only.
+
+        **Graph-RAG**  
+        Uses entity relationships + context.
+        """
+    )
 
 st.markdown("---")
 
