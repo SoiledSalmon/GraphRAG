@@ -1,5 +1,40 @@
 import streamlit as st
 import time
+st.markdown("""
+<style>
+
+/* Main app background */
+.stApp {
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: white;
+}
+
+/* Title */
+h1 {
+    text-align: center;
+    font-weight: 700;
+}
+
+/* Chat input box */
+textarea {
+    border-radius: 12px !important;
+}
+
+/* Chat bubbles */
+[data-testid="stChatMessage"] {
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+}
+
+/* Radio buttons spacing */
+.stRadio > div {
+    gap: 20px;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # -------------------------------
 # Page Configuration
@@ -9,17 +44,25 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("Graph-Based RAG Chatbot")
+st.markdown("""
+<h1>🧠 Graph-Based RAG Chatbot</h1>
+<p style="text-align:center; color:#cccccc;">
+Baseline RAG vs Graph-RAG using structured memory
+</p>
+""", unsafe_allow_html=True)
 
 # -------------------------------
 # Mode Selector
 # -------------------------------
+
 with st.sidebar:
     st.header("Settings")
     mode = st.radio(
-        "Retrieval Mode",
-        ("Baseline RAG", "Graph-RAG")
-    )
+    "🔀 Retrieval Mode",
+    ("Baseline RAG (Text Memory)", "Graph-RAG (Graph Memory)"),
+    horizontal=True
+)
+    st.markdown("<hr style='border:1px solid #444;'>", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown(
