@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import requests
 
 # -------------------------------
 # Page Configuration (MUST BE FIRST)
@@ -93,24 +94,30 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # -------------------------------
-# Mock Backend Response
+# Backend Integration
 # -------------------------------
-def get_mock_response(user_input, mode):
-    time.sleep(1)
-
-    if "Graph-RAG" in mode:
-        return (
-            "📌 **Graph-RAG Response**\n\n"
-            "This answer uses structured graph memory to retrieve "
-            "related entities, past interactions, and connected topics, "
-            "resulting in better contextual continuity."
-        )
-    else:
-        return (
-            "📄 **Baseline RAG Response**\n\n"
-            "This answer is generated using recent text context only, "
-            "without considering relationships between past interactions."
-        )
+def get_backend_response(user_input, mode_selection):
+    """
+    Calls the real FastAPI backend to get a response.
+    """
+    url = "http://localhost:8000/chat"
+    
+    # Map UI selection to backend modes
+    backend_mode = "graph" if "Graph-RAG" in mode_selection else "baseline"
+    
+    payload = {
+        "user_id": "demo_user",
+        "message": user_input,
+        "mode": backend_mode
+    }
+    
+    try:
+        response = requests.post(url, json=payload, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("response", "No response received.")
+    except Exception as e:
+        return f"⚠️ Error: Could not connect to the backend at {url}. ({str(e)})"
 
 # -------------------------------
 # Chat Input
@@ -128,7 +135,7 @@ if user_input:
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            response = get_mock_response(user_input, mode)
+            response = get_backend_response(user_input, mode)
             st.markdown(response)
 
     st.session_state.messages.append({
