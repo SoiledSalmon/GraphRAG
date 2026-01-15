@@ -6,7 +6,6 @@ import time
 # -------------------------------
 st.set_page_config(
     page_title="Graph-Based RAG Chatbot",
-    page_icon="🤖",
     layout="centered"
 )
 
