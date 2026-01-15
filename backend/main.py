@@ -6,6 +6,7 @@ import os
 # Internal module integrations
 from .rag.extractor import extract_entities
 from .graph.retriever import GraphRetriever
+from .graph.graph import GraphMemory
 from .rag.baseline import add_user_message, build_baseline_context
 from .rag.prompt_builder import build_prompt
 from .llm.gemini_client import generate_response
@@ -61,6 +62,15 @@ async def chat(request: ChatRequest):
                 prompt = build_prompt(graph_context, request.message)
             finally:
                 retriever.close()
+            
+            # Write interaction to the graph safely
+            try:
+                memory = GraphMemory(uri, username, password)
+                memory.write_interaction(request.user_id, request.message, entities, topics)
+                memory.close()
+            except Exception:
+                # Non-blocking write failure
+                pass
         except Exception:
             # Return safe error message if graph retrieval fails
             return ChatResponse(

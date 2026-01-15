@@ -19,11 +19,12 @@ class GraphMemory:
         with self.driver.session() as session:
             session.run(query, user_id=user_id)
 
-    def create_event(self, event_type):
+    def create_event(self, event_type, content=None):
         query = """
         CREATE (e:Event {
             type: $event_type,
-            timestamp: $timestamp
+            timestamp: $timestamp,
+            content: $content
         })
         RETURN e
         """
@@ -31,9 +32,41 @@ class GraphMemory:
             result = session.run(
                 query,
                 event_type=event_type,
-                timestamp=datetime.utcnow().isoformat()
+                timestamp=datetime.utcnow().isoformat(),
+                content=content
             )
             return result.single()["e"]
+
+    def link_user_event(self, user_id, event_id):
+        query = """
+        MATCH (u:User {id: $user_id})
+        MATCH (e:Event) WHERE id(e) = $event_id
+        MERGE (u)-[:ASKED_ABOUT]->(e)
+        """
+        with self.driver.session() as session:
+            session.run(
+                query,
+                user_id=user_id,
+                event_id=event_id
+            )
+
+    def write_interaction(self, user_id, message, entities, topics):
+        self.get_or_create_user(user_id)
+        
+        event = self.create_event("USER_QUERY", content=message)
+        event_id = event.id
+        
+        self.link_user_event(user_id, event_id)
+        
+        for entity in entities:
+            self.get_or_create_entity(entity)
+            self.link_event_entity(event_id, entity)
+            
+        for topic in topics:
+            self.get_or_create_topic(topic)
+            self.link_event_topic(event_id, topic)
+            
+        return event_id
         
     def get_or_create_entity(self, entity_name):
         query = """
