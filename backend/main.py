@@ -63,7 +63,7 @@ async def chat(request: ChatRequest):
             finally:
                 retriever.close()
             
-            # Write interaction to the graph safely
+            # Retrieve THEN Write: We want context from past events, not the current one.
             try:
                 memory = GraphMemory(uri, username, password)
                 memory.write_interaction(request.user_id, request.message, entities, topics)
