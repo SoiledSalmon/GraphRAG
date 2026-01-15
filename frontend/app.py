@@ -1,5 +1,17 @@
 import streamlit as st
 import time
+
+# -------------------------------
+# Page Configuration (MUST BE FIRST)
+# -------------------------------
+st.set_page_config(
+    page_title="Graph-Based RAG Chatbot",
+    layout="wide"
+)
+
+# -------------------------------
+# Custom CSS Styling
+# -------------------------------
 st.markdown("""
 <style>
 
@@ -22,13 +34,13 @@ textarea {
 
 /* Chat bubbles */
 [data-testid="stChatMessage"] {
-    background-color: rgba(255, 255, 255, 0.05);
-    padding: 12px;
-    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.08);
+    padding: 14px;
+    border-radius: 14px;
     margin-bottom: 10px;
 }
 
-/* Radio buttons spacing */
+/* Radio spacing */
 .stRadio > div {
     gap: 20px;
 }
@@ -37,13 +49,8 @@ textarea {
 """, unsafe_allow_html=True)
 
 # -------------------------------
-# Page Configuration
+# Title Section
 # -------------------------------
-st.set_page_config(
-    page_title="Graph-Based RAG Chatbot",
-    layout="wide"
-)
-
 st.markdown("""
 <h1>🧠 Graph-Based RAG Chatbot</h1>
 <p style="text-align:center; color:#cccccc;">
@@ -52,30 +59,25 @@ Baseline RAG vs Graph-RAG using structured memory
 """, unsafe_allow_html=True)
 
 # -------------------------------
-# Mode Selector
+# Sidebar Controls
 # -------------------------------
-
 with st.sidebar:
     st.header("Settings")
+
     mode = st.radio(
-    "🔀 Retrieval Mode",
-    ("Baseline RAG (Text Memory)", "Graph-RAG (Graph Memory)"),
-    horizontal=True
-)
-    st.markdown("<hr style='border:1px solid #444;'>", unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown(
-        """
-        **Baseline RAG**  
-        Uses vector similarity only.
-
-        **Graph-RAG**  
-        Uses entity relationships + context.
-        """
+        "🔀 Retrieval Mode",
+        ("Baseline RAG (Text Memory)", "Graph-RAG (Graph Memory)")
     )
 
-st.markdown("---")
+    st.markdown("---")
+
+    st.markdown("""
+    **Baseline RAG**  
+    Uses vector similarity only.
+
+    **Graph-RAG**  
+    Uses entity relationships + context.
+    """)
 
 # -------------------------------
 # Initialize Chat History
@@ -94,13 +96,9 @@ for message in st.session_state.messages:
 # Mock Backend Response
 # -------------------------------
 def get_mock_response(user_input, mode):
-    """
-    Temporary mock function.
-    Replace this with FastAPI call later.
-    """
     time.sleep(1)
 
-    if mode == "Graph-RAG":
+    if "Graph-RAG" in mode:
         return (
             "📌 **Graph-RAG Response**\n\n"
             "This answer uses structured graph memory to retrieve "
@@ -120,25 +118,20 @@ def get_mock_response(user_input, mode):
 user_input = st.chat_input("Ask a question...")
 
 if user_input:
-    # Add user message
     st.session_state.messages.append({
         "role": "user",
         "content": user_input
     })
 
-    # Display user message immediately
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # Generate response
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             response = get_mock_response(user_input, mode)
             st.markdown(response)
 
-    # Save assistant response
     st.session_state.messages.append({
         "role": "assistant",
         "content": response
     })
-
