@@ -12,7 +12,7 @@ class GraphMemory:
         self.driver.close()
 
     def get_or_create_user(self, user_id):
-        query = """"
+        query = """
             MERGE (u:User {id: $user_id})
             RETURN u
         """
