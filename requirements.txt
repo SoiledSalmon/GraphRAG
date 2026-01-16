@@ -18,3 +18,4 @@ streamlit==1.30.0
 
 # Note: After installing, download spaCy language model with:
 # python -m spacy download en_core_web_sm
+# Additional dependencies can be added as needed
