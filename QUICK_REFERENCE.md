@@ -15,7 +15,7 @@ docker run -d -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:lates
 
 # 4. Start backend (Terminal 1)
 cd backend
-uvicorn main:app --reload
+uvicorn backend.main:app --reload
 
 # 5. Run validation (Terminal 2)
 python test_validation.py

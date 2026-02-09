@@ -2,6 +2,17 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Literal, Any, Dict
 import os
+import logging
+from dotenv import load_dotenv
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+load_dotenv()  # Load .env before any os.environ.get() calls
+
+logger = logging.getLogger(__name__)
 
 # Internal module integrations
 from .rag.extractor import extract_entities
@@ -68,11 +79,10 @@ async def chat(request: ChatRequest):
                 memory = GraphMemory(uri, username, password)
                 memory.write_interaction(request.user_id, request.message, entities, topics)
                 memory.close()
-            except Exception:
-                # Non-blocking write failure
-                pass
-        except Exception:
-            # Return safe error message if graph retrieval fails
+            except Exception as e:
+                logger.warning("Graph write failed (non-blocking): %s", e)
+        except Exception as e:
+            logger.error("Graph retrieval failed: %s", e)
             return ChatResponse(
                 response="The system is temporarily unavailable due to a graph error.",
                 context_used=[]

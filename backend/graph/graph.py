@@ -1,5 +1,5 @@
 from neo4j import GraphDatabase
-from datetime import datetime
+from datetime import datetime, timezone
 
 class GraphMemory:
     def __init__(self, uri, username, password):
@@ -32,7 +32,7 @@ class GraphMemory:
             result = session.run(
                 query,
                 event_type=event_type,
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 content=content
             )
             return result.single()["e"]

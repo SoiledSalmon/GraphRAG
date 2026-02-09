@@ -73,10 +73,10 @@ with st.sidebar:
     st.markdown("---")
 
     st.markdown("""
-    **Baseline RAG**  
-    Uses vector similarity only.
+    **Baseline RAG**
+    Uses recent message history (last 5).
 
-    **Graph-RAG**  
+    **Graph-RAG**
     Uses entity relationships + context.
     """)
 
