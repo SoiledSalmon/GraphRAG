@@ -6,28 +6,10 @@ It acts as a translation layer between structured retrieval data and the text ge
 
 from typing import Dict, Any
 
-def build_prompt(context: Dict[str, Any], query: str) -> str:
+def format_memory_context(context: Dict[str, Any]) -> str:
     """
-    Constructs a prompt for the LLM by combining the retrieved context and the user's query.
-
-    Args:
-        context (dict): A dictionary containing retrieval results, expected to match the format:
-            {
-                "past_events": [
-                    {"type": "USER_QUERY", "timestamp": "...", "entity": "string"},
-                    ...
-                ],
-                "entity_count": int,
-                "topic_count": int
-            }
-        query (str): The raw input query from the user.
-
-    Returns:
-        str: A formatted natural language string suitable for direct input to an LLM.
+    Formats the graph context into a string representation for the LLM or Evaluator.
     """
-    sections = []
-
-    # Process Memory Context
     memory_lines = []
     
     past_events = context.get("past_events", [])
@@ -51,10 +33,28 @@ def build_prompt(context: Dict[str, Any], query: str) -> str:
         
         count_summary += " " + " and ".join(parts) + "."
         memory_lines.append(count_summary)
+        
+    return "\n".join(memory_lines)
 
-    if memory_lines:
+def build_prompt(context: Dict[str, Any], query: str) -> str:
+    """
+    Constructs a prompt for the LLM by combining the retrieved context and the user's query.
+
+    Args:
+        context (dict): A dictionary containing retrieval results.
+        query (str): The raw input query from the user.
+
+    Returns:
+        str: A formatted natural language string suitable for direct input to an LLM.
+    """
+    sections = []
+
+    # Process Memory Context
+    memory_str = format_memory_context(context)
+
+    if memory_str:
         sections.append("Memory Context:")
-        sections.extend(memory_lines)
+        sections.append(memory_str)
         sections.append("") # Add spacing
 
     # Process User Query

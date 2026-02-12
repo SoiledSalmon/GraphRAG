@@ -174,22 +174,7 @@ if page == "💬 Chat Interface":
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
             
-            # Display CRS metrics inline
-            if "crs" in message and message["crs"]:
-                crs = message["crs"]
-                with st.expander("📊 Analysis & Debug"):
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("Composite", crs.get("composite_score", 0))
-                    c2.metric("Recall", crs.get("context_recall", 0))
-                    c3.metric("Precision", crs.get("context_precision", 0))
-                    
-                    st.divider()
-                    st.caption("🔍 Debug Data")
-                    d1, d2 = st.columns(2)
-                    with d1:
-                        st.json({"Query Ents": crs.get("query_entities", [])}, expanded=False)
-                    with d2:
-                        st.json({"Context Ents": crs.get("context_entities", [])}, expanded=False)
+
 
     # -------------------------------
     # Chat Input
@@ -222,19 +207,7 @@ if page == "💬 Chat Interface":
                     else:
                         st.session_state.baseline_scores.append(score_val)
 
-                    with st.expander("📊 Analysis & Debug"):
-                        c1, c2, c3 = st.columns(3)
-                        c1.metric("Composite", score_val)
-                        c2.metric("Recall", crs_data.get("context_recall", 0))
-                        c3.metric("Precision", crs_data.get("context_precision", 0))
-                        
-                        st.divider()
-                        st.caption("🔍 Debug Data")
-                        d1, d2 = st.columns(2)
-                        with d1:
-                            st.json({"Query Ents": crs_data.get("query_entities", [])}, expanded=False)
-                        with d2:
-                            st.json({"Context Ents": crs_data.get("context_entities", [])}, expanded=False)
+
 
         st.session_state.messages.append({
             "role": "assistant",

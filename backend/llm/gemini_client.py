@@ -13,7 +13,21 @@ import google.generativeai as genai
 logger = logging.getLogger(__name__)
 
 # Configuration
-_MODELS_TO_TRY = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-2.0-flash-001"]
+_MODELS_TO_TRY = [
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-001",
+    "gemini-2.0-flash-lite",
+    "gemini-2.5-flash-lite",
+    "gemini-3-pro-preview",
+    "gemini-3-flash-preview",
+    "gemma-3-27b-it",
+    "gemma-3-12b-it",
+    "gemma-3-4b-it",
+    "gemma-3-1b-it",
+    "deep-research-pro-preview-12-2025"
+]
 _FALLBACK_MESSAGE = "The system is temporarily unavailable."
 
 # Module-level flag to track SDK configuration
