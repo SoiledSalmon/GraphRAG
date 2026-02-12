@@ -13,7 +13,7 @@ import google.generativeai as genai
 logger = logging.getLogger(__name__)
 
 # Configuration
-_MODEL_NAME = "gemini-flash-latest"
+_MODELS_TO_TRY = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-2.0-flash-001"]
 _FALLBACK_MESSAGE = "The system is temporarily unavailable."
 
 # Module-level flag to track SDK configuration
@@ -47,6 +47,7 @@ def _configure_sdk() -> None:
 def generate_response(prompt: str) -> str:
     """
     Sends a prompt to the Gemini API and returns the generated text.
+    Retries with fallback models if a quota exhaustion (429) error occurs.
 
     Args:
         prompt (str): The fully constructed natural language prompt.
@@ -57,14 +58,40 @@ def generate_response(prompt: str) -> str:
     try:
         _configure_sdk()
 
-        model = genai.GenerativeModel(_MODEL_NAME)
-        response = model.generate_content(prompt)
+        for model_name in _MODELS_TO_TRY:
+            try:
+                logger.debug(f"Attempting to generate response with model: {model_name}")
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt)
 
-        if not response.text:
-            logger.debug("Gemini response has no text content")
-            return _FALLBACK_MESSAGE
+                if not response.text:
+                    logger.debug(f"Gemini response from {model_name} has no text content")
+                    continue # Try next model or return fallback? 
+                           # Actually emptiness might not be a 429, but let's assume if one fails we try others?
+                           # No, only 429 is worth retrying for quota. Empty text is a model behavior issue.
+                           # For now, let's return if we get a response.
+                    return _FALLBACK_MESSAGE
 
-        return response.text
+                return response.text
+
+            except Exception as e:
+                error_str = str(e)
+                # Check for 429 Quota Exceeded (ResourceExhausted)
+                if "429" in error_str or "quota" in error_str.lower() or "resource exhausted" in error_str.lower():
+                    logger.warning(f"Quota exceeded for {model_name}. Retrying with next model...")
+                    continue
+                else:
+                    # Reraise or log other errors? 
+                    # If it's not a quota error, it might be a prompt safety error or network error.
+                    # We should probably try other models even for safety errors sometimes, but strictly for 429 here.
+                    logger.error(f"Gemini API request failed for {model_name}: {e}")
+                    # If it's a critical error (not 429), maybe we shouldn't retry?
+                    # But to be robust, let's continue to the next model just in case it's model-specific.
+                    continue
+
+        # If all models fail
+        logger.error("All Gemini models failed.")
+        return _FALLBACK_MESSAGE
 
     except RuntimeError:
         # Re-raise configuration errors (missing/invalid API key)

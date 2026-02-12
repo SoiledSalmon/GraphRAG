@@ -1,6 +1,7 @@
 import streamlit as st
 import time
 import requests
+import pandas as pd
 
 # -------------------------------
 # Page Configuration (MUST BE FIRST)
@@ -46,52 +47,52 @@ textarea {
     gap: 20px;
 }
 
+/* Dashboard Cards */
+.metric-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-graph {
+    border-left: 5px solid #00f260; /* Neo Green */
+    box-shadow: 0 0 15px rgba(0, 242, 96, 0.1);
+}
+
+.card-baseline {
+    border-left: 5px solid #a770ef; /* Purple */
+    box-shadow: 0 0 15px rgba(167, 112, 239, 0.1);
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: #cccccc;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------------
-# Title Section
-# -------------------------------
-st.markdown("""
-<h1>🧠 Graph-Based RAG Chatbot</h1>
-<p style="text-align:center; color:#cccccc;">
-Baseline RAG vs Graph-RAG using structured memory
-</p>
-""", unsafe_allow_html=True)
-
-# -------------------------------
-# Sidebar Controls
-# -------------------------------
-with st.sidebar:
-    st.header("Settings")
-
-    mode = st.radio(
-        "🔀 Retrieval Mode",
-        ("Baseline RAG (Text Memory)", "Graph-RAG (Graph Memory)")
-    )
-
-    st.markdown("---")
-
-    st.markdown("""
-    **Baseline RAG**
-    Uses recent message history (last 5).
-
-    **Graph-RAG**
-    Uses entity relationships + context.
-    """)
-
-# -------------------------------
-# Initialize Chat History
+# State Initialization
 # -------------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# -------------------------------
-# Display Chat History
-# -------------------------------
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+if "baseline_scores" not in st.session_state:
+    st.session_state.baseline_scores = []
+
+if "graph_scores" not in st.session_state:
+    st.session_state.graph_scores = []
 
 # -------------------------------
 # Backend Integration
@@ -100,7 +101,9 @@ def get_backend_response(user_input, mode_selection):
     """
     Calls the real FastAPI backend to get a response.
     """
-    url = "http://localhost:8000/chat"
+    # Use environment variable for backend URL, default to localhost
+    import os
+    url = os.getenv("BACKEND_URL", "http://localhost:8000/chat")
     
     # Map UI selection to backend modes
     backend_mode = "graph" if "Graph-RAG" in mode_selection else "baseline"
@@ -112,33 +115,196 @@ def get_backend_response(user_input, mode_selection):
     }
     
     try:
-        response = requests.post(url, json=payload, timeout=30)
+        response = requests.post(url, json=payload, timeout=60)
         response.raise_for_status()
-        data = response.json()
-        return data.get("response", "No response received.")
+        return response.json()
     except Exception as e:
-        return f"⚠️ Error: Could not connect to the backend at {url}. ({str(e)})"
+        return {
+            "response": f"⚠️ Error: Could not connect to the backend at {url}. ({str(e)})",
+            "crs_scores": None
+        }
 
 # -------------------------------
-# Chat Input
+# Title
 # -------------------------------
-user_input = st.chat_input("Ask a question...")
+st.markdown("""
+<h1>🧠 Graph-Based RAG Chatbot</h1>
+<p style="text-align:center; color:#cccccc;">
+Baseline RAG vs Graph-RAG using structured memory
+</p>
+""", unsafe_allow_html=True)
 
-if user_input:
-    st.session_state.messages.append({
-        "role": "user",
-        "content": user_input
-    })
+# -------------------------------
+# Sidebar Navigation & Settings
+# -------------------------------
+with st.sidebar:
+    st.header("Navigation")
+    page = st.radio("Go to", ["💬 Chat Interface", "📊 CRS Dashboard"])
+    
+    st.divider()
+    
+    st.header("Settings")
+    mode = st.radio(
+        "🔀 Retrieval Mode",
+        ("Baseline RAG (Text Memory)", "Graph-RAG (Graph Memory)")
+    )
+    st.markdown("---")
+    st.markdown("""
+    **Baseline RAG**
+    Uses recent message history (last 5).
 
-    with st.chat_message("user"):
-        st.markdown(user_input)
+    **Graph-RAG**
+    Uses entity relationships + context.
+    """)
+    
+    if st.button("Clear History"):
+        st.session_state.messages = []
+        st.session_state.baseline_scores = []
+        st.session_state.graph_scores = []
+        st.rerun()
 
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            response = get_backend_response(user_input, mode)
-            st.markdown(response)
+# -------------------------------
+# Page Logic
+# -------------------------------
+if page == "💬 Chat Interface":
+    # -------------------------------
+    # Chat History
+    # -------------------------------
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+            
+            # Display CRS metrics inline
+            if "crs" in message and message["crs"]:
+                crs = message["crs"]
+                with st.expander("📊 Analysis & Debug"):
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("Composite", crs.get("composite_score", 0))
+                    c2.metric("Recall", crs.get("context_recall", 0))
+                    c3.metric("Precision", crs.get("context_precision", 0))
+                    
+                    st.divider()
+                    st.caption("🔍 Debug Data")
+                    d1, d2 = st.columns(2)
+                    with d1:
+                        st.json({"Query Ents": crs.get("query_entities", [])}, expanded=False)
+                    with d2:
+                        st.json({"Context Ents": crs.get("context_entities", [])}, expanded=False)
 
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": response
-    })
+    # -------------------------------
+    # Chat Input
+    # -------------------------------
+    user_input = st.chat_input("Ask a question...")
+
+    if user_input:
+        st.session_state.messages.append({
+            "role": "user",
+            "content": user_input
+        })
+
+        with st.chat_message("user"):
+            st.markdown(user_input)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                backend_data = get_backend_response(user_input, mode)
+                
+                response_text = backend_data.get("response", "No response")
+                crs_data = backend_data.get("crs_scores")
+                
+                st.markdown(response_text)
+                
+                if crs_data:
+                    # Update History for Dashboard
+                    score_val = crs_data.get("composite_score", 0)
+                    if "Graph-RAG" in mode:
+                        st.session_state.graph_scores.append(score_val)
+                    else:
+                        st.session_state.baseline_scores.append(score_val)
+
+                    with st.expander("📊 Analysis & Debug"):
+                        c1, c2, c3 = st.columns(3)
+                        c1.metric("Composite", score_val)
+                        c2.metric("Recall", crs_data.get("context_recall", 0))
+                        c3.metric("Precision", crs_data.get("context_precision", 0))
+                        
+                        st.divider()
+                        st.caption("🔍 Debug Data")
+                        d1, d2 = st.columns(2)
+                        with d1:
+                            st.json({"Query Ents": crs_data.get("query_entities", [])}, expanded=False)
+                        with d2:
+                            st.json({"Context Ents": crs_data.get("context_entities", [])}, expanded=False)
+
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": response_text,
+            "crs": crs_data
+        })
+        st.rerun() # Rerun to update dashboard immediately
+
+elif page == "📊 CRS Dashboard":
+    st.markdown("## Context Retention Score (CRS)")
+    st.markdown("Measuring how well each system remembers user context.")
+    
+    # Info Box
+    st.info("""
+    **What is CRS?**
+    CRS measures the percentage of stored context units (facts, entities, topics) that are correctly referenced 
+    in the chatbot's responses. Higher scores indicate better memory retention.
+    """)
+    
+    # Calculate Averages
+    def get_avg(scores):
+        return sum(scores) / len(scores) if scores else 0.0
+
+    avg_graph = get_avg(st.session_state.graph_scores) * 100
+    avg_base = get_avg(st.session_state.baseline_scores) * 100
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="metric-card card-graph">
+            <h3 style="color:#00f260">🧠 Memory-Centric (Graph)</h3>
+            <p class="metric-label">Average CRS</p>
+            <p class="metric-value" style="color:#00f260">{avg_graph:.1f}%</p>
+            <br>
+            <p>Conversation Turns: {len(st.session_state.graph_scores)}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.progress(avg_graph / 100)
+        
+    with col2:
+        st.markdown(f"""
+        <div class="metric-card card-baseline">
+            <h3 style="color:#a770ef">📄 RAG Baseline</h3>
+            <p class="metric-label">Average CRS</p>
+            <p class="metric-value" style="color:#a770ef">{avg_base:.1f}%</p>
+            <br>
+            <p>Conversation Turns: {len(st.session_state.baseline_scores)}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.progress(avg_base / 100)
+    
+    st.divider()
+    
+    # Detailed History Chart
+    if st.session_state.graph_scores or st.session_state.baseline_scores:
+        st.subheader("Session History")
+        
+        # Normalize lengths for chart
+        max_len = max(len(st.session_state.graph_scores), len(st.session_state.baseline_scores))
+        turns = range(1, max_len + 1)
+        
+        # Pad data
+        g_data = st.session_state.graph_scores + [None] * (max_len - len(st.session_state.graph_scores))
+        b_data = st.session_state.baseline_scores + [None] * (max_len - len(st.session_state.baseline_scores))
+        
+        df = pd.DataFrame({
+            "Turn": turns,
+            "Graph-RAG": g_data,
+            "Baseline": b_data
+        })
+        
+        st.line_chart(df, x="Turn", color=["#00f260", "#a770ef"])
